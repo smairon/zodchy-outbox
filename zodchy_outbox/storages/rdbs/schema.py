@@ -3,9 +3,12 @@ from functools import cached_property
 import sqlalchemy.dialects.postgresql
 from sqlalchemy_schema_factory import factory
 
+from .config import Metadata
+
+
 class Schema:
-    def __init__(self, schema: str = "zodchy"):
-        self.db_metadata = sqlalchemy.MetaData(schema=schema)
+    def __init__(self, metadata: Metadata):
+        self.db_metadata = sqlalchemy.MetaData(schema=metadata.schema)
 
     @cached_property
     def messages(self):
@@ -14,7 +17,8 @@ class Schema:
             self.db_metadata,
             factory.uuid_primary_key(),
             factory.string(name="name", nullable=False),
-            factory.jsonb_aware(name="payload", nullable=False),
+            factory.jsonb_aware(name="body", nullable=False),
+            factory.jsonb_aware(name="headers", nullable=True),
         )
 
     @cached_property
@@ -24,11 +28,10 @@ class Schema:
             self.db_metadata,
             factory.uuid_primary_key(),
             factory.foreign_key(to_=self.messages, name="message_id", nullable=False),
-            factory.string(name="handler_id", nullable=False),
+            factory.string(name="dispatcher_id", nullable=False),
             factory.string(name="status", nullable=False),
             factory.datetime(name="scheduled_at", nullable=False),
-            factory.jsonb(name="handler_settings", nullable=True),
-            factory.jsonb(name="task_settings", nullable=True)
+            factory.jsonb_aware(name="settings", nullable=True),
         )
 
     @cached_property
@@ -39,5 +42,5 @@ class Schema:
             factory.uuid_primary_key(),
             factory.foreign_key(to_=self.tasks, name="task_id", nullable=False),
             factory.string(name="status", nullable=False),
-            factory.jsonb(name="payload", nullable=True)
+            factory.jsonb_aware(name="payload", nullable=True),
         )

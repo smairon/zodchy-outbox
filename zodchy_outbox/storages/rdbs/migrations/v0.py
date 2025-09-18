@@ -5,7 +5,8 @@ def upgrade(schema: str = "zodchy") -> list[str]:
         CREATE TABLE {schema}.outbox_messages (
             id UUID DEFAULT gen_random_uuid() NOT NULL,
             name VARCHAR NOT NULL,
-            payload JSONB NOT NULL,
+            body JSONB NOT NULL,
+            headers JSONB,
             CONSTRAINT pk__outbox_messages PRIMARY KEY (id)
         );
         """,
@@ -14,11 +15,10 @@ def upgrade(schema: str = "zodchy") -> list[str]:
     CREATE TABLE {schema}.outbox_tasks (
         id UUID DEFAULT gen_random_uuid() NOT NULL,
         message_id UUID NOT NULL,
-        handler_id VARCHAR NOT NULL,
+        dispatcher_id VARCHAR NOT NULL,
         status VARCHAR NOT NULL,
         scheduled_at TIMESTAMP NOT NULL,
-        handler_settings JSONB,
-        task_settings JSONB,
+        settings JSONB,
         CONSTRAINT pk__outbox_tasks PRIMARY KEY (id),
         CONSTRAINT fk__outbox_tasks__message_id__outbox_messages FOREIGN KEY (message_id)
             REFERENCES {schema}.outbox_messages(id)

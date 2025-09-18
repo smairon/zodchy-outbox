@@ -1,4 +1,4 @@
 from .migrator import Migrator
-from . import handlers, config
+from . import config, readers, writers
 
-__all__ = ["Migrator", "handlers", "config"]
+__all__ = ["Migrator", "readers", "writers", "config"]

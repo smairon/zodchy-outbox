@@ -1,12 +1,15 @@
 import collections.abc
 from ..contracts.messages import GetOutboxTasks, OutboxTaskForProcessingReceived
-from ..contracts.storage import TasksForStatusHandlerContract
+from ..contracts.storage import (
+    TasksForStatusReaderContract,
+    TasksStatusUpdatingWriterContract,
+)
 from ..contracts.enums import TaskStatus
 
 
-async def tasks_ready_for_dispatch_reader(
+async def tasks_ready_for_processing_reader(
     query: GetOutboxTasks,
-    handler: TasksForStatusHandlerContract,
+    handler: TasksForStatusReaderContract,
 ) -> collections.abc.AsyncIterable[OutboxTaskForProcessingReceived]:
     for task in await handler(
         query=query,
@@ -14,9 +17,15 @@ async def tasks_ready_for_dispatch_reader(
     ):
         yield OutboxTaskForProcessingReceived(
             id=task["id"],
-            message_name=task["message_name"],
-            message_payload=task["message_payload"],
+            message=task["message"],
             scheduled_at=task["scheduled_at"],
-            handler_id=task["handler_id"],
-            handler_settings=task["handler_settings"],
+            dispatcher_id=task["dispatcher_id"],
+            settings=task["settings"],
         )
+
+
+async def processed_tasks_writer(
+    tasks: list[OutboxTaskForProcessingReceived],
+    tasks_status_updating_writer: TasksStatusUpdatingWriterContract,
+) -> None:
+    await tasks_status_updating_writer(ids=[task.id for task in tasks])
