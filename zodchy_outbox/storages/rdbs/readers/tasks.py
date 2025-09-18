@@ -8,7 +8,7 @@ from .generic import Reader
 
 class TasksForStatusReader(Reader):
     async def __call__(self, query: Query, assure_status: str):
-        async with self._engine.connect() as connection:
+        async with self._engine.begin() as connection:
             sql_query = sqlalchemy.select(
                 self._schema.tasks.c.id,
                 self._schema.tasks.c.scheduled_at,

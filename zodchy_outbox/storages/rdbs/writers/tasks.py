@@ -94,7 +94,7 @@ class TasksUpdatingWriter(TasksOperationWriter):
 
 class TasksStatusUpdatingWriter(ConnectionWriter):
     async def __call__(self, ids: list[TaskId], status: str):
-        async with self._engine.connect() as connection:
+        async with self._engine.begin() as connection:
             await connection.execute(
                 sqlalchemy.update(self._schema.tasks)
                 .where(self._schema.tasks.c.id.in_(ids))
