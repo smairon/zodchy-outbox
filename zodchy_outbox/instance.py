@@ -75,7 +75,7 @@ class ZodchyOutboxProcessor:
                     headers=task.message["headers"],
                 )
             ):
-                yield task["id"]
+                yield task.id
 
     async def _register(
         self,

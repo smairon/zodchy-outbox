@@ -46,9 +46,10 @@ class TasksForStatusReader(Reader):
                 )
                 for row in stream
             ]
-            await connection.execute(
-                sqlalchemy.update(self._schema.tasks)
-                .where(self._schema.tasks.c.id.in_([task["id"] for task in result]))
-                .values(status=assure_status)
-            )
+            if result:
+                await connection.execute(
+                    sqlalchemy.update(self._schema.tasks)
+                    .where(self._schema.tasks.c.id.in_([task["id"] for task in result]))
+                    .values(status=assure_status)
+                )
             return result
