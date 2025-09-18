@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "zodchy-outbox"
-version = "0.2.2"
+version = "0.2.3"
 description = "Outbox pattern for zodchy architecture"
 authors = ["Smairon <man@smairon.ru>"]
 readme = "README.md"

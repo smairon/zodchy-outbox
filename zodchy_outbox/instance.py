@@ -1,7 +1,7 @@
 import typing
 from zodchy.codex.transport import DispatcherContract, CommunicationMessage
 from .contracts.messages import GetOutboxTasks, TaskStatus
-from .contracts.types import TaskId, MessageId
+from .contracts.types import TaskId
 from .contracts.storage import (
     TasksForStatusReaderContract,
     TasksStatusUpdatingWriterContract,
@@ -41,10 +41,10 @@ class ZodchyOutboxProcessor:
 
     async def __call__(self, query: GetOutboxTasks):
         done = []
-        async for message_id in self._dispatch(
+        async for task_id in self._dispatch(
             await self._get_tasks_for_processing(query),
         ):
-            done.append(message_id)
+            done.append(task_id)
 
         if done:
             await self._register(done)
@@ -64,7 +64,7 @@ class ZodchyOutboxProcessor:
     async def _dispatch(
         self,
         tasks: list[OutboxTaskForProcessingReceived],
-    ) -> typing.AsyncGenerator[MessageId, None]:
+    ) -> typing.AsyncGenerator[TaskId, None]:
         for task in tasks:
             dispatcher = self._dispatcher_registry[task.dispatcher_id]
             if await dispatcher.dispatch(
@@ -75,7 +75,7 @@ class ZodchyOutboxProcessor:
                     headers=task.message["headers"],
                 )
             ):
-                yield task.message["id"]
+                yield task["id"]
 
     async def _register(
         self,
