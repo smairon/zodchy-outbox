@@ -4,6 +4,7 @@ import sqlalchemy
 from zodchy.codex.cqea import Query
 from zodchy_alchemy import QueryAssembler
 from zodchy_alchemy.adapters.cqea import QueryAdapter
+from zodchy_alchemy.contracts import WriteConnectionContract
 
 from ....contracts.storage import (
     TaskCreationModel,
@@ -19,8 +20,8 @@ class Log(typing.TypedDict):
 
 
 class TasksOperation(RegistrationHandler, abc.ABC):
-    async def _save_logs(self, *logs: Log):
-        await self._transaction.execute(
+    async def _save_logs(self, *logs: Log, transaction: WriteConnectionContract):
+        await transaction.execute(
             sqlalchemy.insert(self._schema.logs).values(logs)
         )
 
@@ -47,10 +48,17 @@ class TasksCreationHandler(TasksOperation):
                     status=task["status"],
                 )
             )
-        await self._transaction.execute(
-            sqlalchemy.insert(self._schema.tasks).values(_tasks)
-        )
-        await self._save_logs(*_logs)
+        if self._transaction is None:
+            async with self._engine.begin() as transaction:
+                await transaction.execute(
+                    sqlalchemy.insert(self._schema.tasks).values(_tasks)
+                )
+                await self._save_logs(*_logs, transaction=transaction)
+        else:
+            await self._transaction.execute(
+                sqlalchemy.insert(self._schema.tasks).values(_tasks)
+            )
+            await self._save_logs(*_logs, transaction=self._transaction)
 
 
 class TasksUpdatingHandler(TasksOperation):
@@ -75,20 +83,25 @@ class TasksUpdatingHandler(TasksOperation):
             await self._write_many(data)
 
     async def _write_one(self, data: dict, ids: list[TaskId]):
-        await self._transaction.execute(
-            sqlalchemy.update(self._schema.tasks)
-            .where(self._schema.tasks.c.id.in_(ids))
-            .values(**{k: v for k, v in data.items() if v is not None})
-        )
+        sql = sqlalchemy.update(self._schema.tasks).where(self._schema.tasks.c.id.in_(ids)).values(**{k: v for k, v in data.items() if v is not None})
+        if self._transaction is None:
+            async with self._engine.begin() as transaction:
+                await transaction.execute(sql)
+        else:
+            await self._transaction.execute(sql)
 
     async def _write_many(self, data: list[dict]):
-        for row in data:
-            _id = row.pop("id")
-            await self._transaction.execute(
-                sqlalchemy.update(self._schema.tasks)
-                .where(self._schema.tasks.c.id == _id)
-                .values(row)
-            )
+        sql = sqlalchemy.update(self._schema.tasks).where(self._schema.tasks.c.id == _id).values(row)
+        if self._transaction is None:
+            async with self._engine.begin() as transaction:
+                for row in data:
+                    _id = row.pop("id")
+                    await transaction.execute(sql)
+        else:
+            for row in data:
+                _id = row.pop("id")
+                await self._transaction.execute(sql)
+
 
 
 class ReadTasksForStatusHandler(ProcessingHandler):
